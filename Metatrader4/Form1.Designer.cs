@@ -61,22 +61,23 @@
             UsernameText.Name = "UsernameText";
             UsernameText.Size = new Size(134, 34);
             UsernameText.TabIndex = 2;
+            UsernameText.Text = "89000015";
             // 
             // PasswordText
             // 
             PasswordText.Location = new Point(22, 170);
             PasswordText.Name = "PasswordText";
-            PasswordText.PasswordChar = '*';
             PasswordText.Size = new Size(134, 34);
             PasswordText.TabIndex = 3;
+            PasswordText.Text = "TU6sIxL";
             // 
             // ServerText
             // 
             ServerText.Location = new Point(22, 228);
             ServerText.Name = "ServerText";
-            ServerText.PasswordChar = '*';
             ServerText.Size = new Size(134, 34);
             ServerText.TabIndex = 4;
+            ServerText.Text = "EightcapLtd-Real2";
             // 
             // Form1
             // 

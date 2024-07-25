@@ -5,8 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Metatrader4
-{
+namespace Metatrader4 {
     class MT4 {
         static string pE = "13ef13b2b76dd8:5795gdcfb2fdc1ge85bf768f54773d22fff996e3ge75g5:75";
         private byte[] FirstEncryptionKey = NormaliseKey(CreateKey(MT4.pE));
@@ -35,46 +34,94 @@ namespace Metatrader4
             return result.ToArray();
         }
 
-        public MT4() {
+        private Random random;
+
+        private byte[] key;
+        private string token;
+
+        public MT4(AccountResponse account) {
+            random = new Random();
+            key = MT4.NormaliseKey(account.key);
+            token = account.token;
         }
 
         public byte[] Token() {
-            byte[] test = { 0 };
-            return test;
+            byte[] token = BinaryWriter.Write8(this.token);
+            byte[] token_init = Init(0, token);
+            byte[] encrypted_token = Encrypt(token_init, FirstEncryptionKey, IV);
+            return encrypted_token;
         }
 
-        public byte[] Encrypt(byte[] bytes, byte[] key, byte[] iv) {
-            using (Aes aes = Aes.Create()) {
+        public byte[] Init(int opcode) {
+            byte[] buffer = new byte[4];
+
+            int offset = 0;
+            buffer[offset++] = GetRandomByte();
+            buffer[offset++] = GetRandomByte();
+            buffer[offset++] = (byte)opcode;
+            buffer[offset++] = 0;
+
+            return buffer;
+        }
+
+        public byte[] Init(int opcode, byte[] token) {
+            byte[] buffer = new byte[4 + token.Length];
+
+            int offset = 0;
+            buffer[offset++] = GetRandomByte();
+            buffer[offset++] = GetRandomByte();
+            buffer[offset++] = (byte)opcode;
+            buffer[offset++] = 0;
+
+            for (int i = 0; i < token.Length; i++) {
+                buffer[offset++] = token[i]; 
+            }
+
+            return buffer;
+        }
+
+        public byte GetRandomByte() {
+            return (byte)Math.Floor(0xFF * random.NextDouble());
+        }
+
+        public byte[] Encrypt(byte[] data, byte[] key, byte[] iv) {
+            using (var aes = Aes.Create()) {
+                aes.KeySize = 128;
+                aes.BlockSize = 128;
+                aes.Padding = PaddingMode.Zeros;
+
                 aes.Key = key;
                 aes.IV = iv;
-                aes.Mode = CipherMode.CBC;
-                ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, IV);
-                using (MemoryStream ms = new MemoryStream()) {
-                using (CryptoStream cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write)) {
-                    cs.Write(bytes, 0, bytes.Length);
-                    cs.FlushFinalBlock();
-                }
-                   return ms.ToArray();
+
+                using (var encryptor = aes.CreateEncryptor(aes.Key, aes.IV)) {
+                    return PerformCryptography(data, encryptor);
                 }
             }
         }
 
 
-        public byte[] Decrypt(byte[] ciphertextBytes, byte[] key, byte[] iv) {
-            using (Aes aes = Aes.Create()) {
+        public byte[] Decrypt(byte[] data) {
+            using (var aes = Aes.Create()) {
+                aes.KeySize = 128;
+                aes.BlockSize = 128;
+                aes.Padding = PaddingMode.Zeros;
+
                 aes.Key = key;
-                aes.IV = iv;
-                aes.Mode = CipherMode.CBC;
+                aes.IV = IV;
 
-                ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, IV);
-
-                using (MemoryStream ms = new MemoryStream(ciphertextBytes)) 
-                using (CryptoStream cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read)) 
-                using (MemoryStream decryptedMs = new MemoryStream()) {
-                    cs.CopyTo(decryptedMs);
-                    return decryptedMs.ToArray();
+                using (var decryptor = aes.CreateDecryptor(aes.Key, aes.IV)) {
+                    return PerformCryptography(data, decryptor);
                 }
+            }
+        }
 
+        private byte[] PerformCryptography(byte[] data, ICryptoTransform cryptoTransform) {
+            using (var ms = new MemoryStream())
+            using (var cryptoStream = new CryptoStream(ms, cryptoTransform, CryptoStreamMode.Write)) {
+                cryptoStream.Write(data, 0, data.Length);
+                cryptoStream.FlushFinalBlock();
+
+                return ms.ToArray();
             }
         }
     }

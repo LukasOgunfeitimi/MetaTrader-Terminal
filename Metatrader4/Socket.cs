@@ -1,31 +1,32 @@
-﻿using Microsoft.VisualBasic.Logging;
+﻿using Microsoft.VisualBasic;
+using Microsoft.VisualBasic.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Metatrader4
 {
-    class InfoResponse {
-        String key;
-        String token;
+    class AccountResponse {
+        public String key { get; set; }
+        public String token { get; set; }
     }
     class Socket
     {
         private MT4 MT;
         private Form1 _MainForm;
         private ClientWebSocket mtSocket;
-        public Socket(Form1 MainForm)
-        {
-            MT = new MT4();
+        public Socket(Form1 MainForm) {
             _MainForm = MainForm;
         }
-        public async Task Connect()
-        {
-            GetInfo();
-            return;
+        public async Task Connect() {
+            AccountResponse account = await GetInfo();
+            MT = new MT4(account);
+
             _MainForm.StatusText = "Connecting";
 
             try
@@ -38,52 +39,73 @@ namespace Metatrader4
                 byte[] token = MT.Token();
 
                 Send(token);
+
+                await ReceiveMessagesAsync();
             } catch (Exception ex)
             {
+                Console.WriteLine(ex);
                 _MainForm.StatusText = "Failed";
             }
 
 
         }
 
-        public async Task<string> GetInfo() {
+        public async Task<AccountResponse> GetInfo() {
             String UserName = _MainForm.UsernameText.Text;
             String Password = _MainForm.PasswordText.Text;
             String Server = _MainForm.ServerText.Text;
 
             String Response = await SendRequest(UserName, Password, Server);
-
-            return "d";
+            AccountResponse res = JsonSerializer.Deserialize<AccountResponse>(Response);
+            return res;
         }
 
         public async Task<string> SendRequest(string Username, string Password, string Server) {
-            using (HttpClient client = new HttpClient()) {
-                client.DefaultRequestHeaders.Add("Accept", "*/*");
-                client.DefaultRequestHeaders.Add("Accept-Language", "en-GB,en-US;q=0.9,en;q=0.8");
-                client.DefaultRequestHeaders.Add("Content-Type", "application/x-www-form-urlencoded");
-                client.DefaultRequestHeaders.Add("Sec-CH-UA", "\"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \"Not?A_Brand\";v=\"24\"");
-                client.DefaultRequestHeaders.Add("Sec-CH-UA-Mobile", "?0");
-                client.DefaultRequestHeaders.Add("Sec-CH-UA-Platform", "\"Windows\"");
-                client.DefaultRequestHeaders.Add("Sec-Fetch-Dest", "empty");
-                client.DefaultRequestHeaders.Add("Sec-Fetch-Mode", "cors");
-                client.DefaultRequestHeaders.Add("Sec-Fetch-Site", "same-origin");
-                client.DefaultRequestHeaders.Add("Referer", "https://metatraderweb.app/trade");
-                client.DefaultRequestHeaders.Add("Referrer-Policy", "strict-origin-when-cross-origin");
-                client.DefaultRequestHeaders.Add("Cookie", "_fz_uniq=5188426201580743742; _fz_fvdt=1699563630; _fz_ssn=1700875826366010805");
+            using var client = new HttpClient();
+            var response = await client.GetAsync(String.Format("https://metatraderweb.app/trade/json?login={0}&trade_server={1}&gwt=6", Username, Server));
+            var responseString = await response.Content.ReadAsStringAsync();
+            return responseString;
 
-                var content = new StringContent($"login={Username}&trade_server={Server}&gwt=6", System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
-
-                var response = await client.PostAsync("https://metatraderweb.app/trade/json", content);
-
-                string responseBody = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(responseBody);
-
-                return responseBody;
-            }
         }
 
-        void Send(byte[] message) {
+        private async Task ReceiveMessagesAsync() {
+            byte[] buffer = new byte[1024 * 4];
 
+            if (mtSocket.State != WebSocketState.Open) return;
+
+            var result = await mtSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+            var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+
+            byte[] decryptedMessage = MT.Decrypt(buffer);
+
+
+
+            Console.WriteLine($"Received: {message}");
+
+        }
+
+        async void Send(byte[] message) {
+            int msgLen = message.Length;
+
+            byte[] MessageToSend = new byte[msgLen + 8];
+            int offset = 0;
+
+            byte[] MessageLengthBytes = BitConverter.GetBytes((int)msgLen);
+            MessageToSend[offset++] = MessageLengthBytes[0];
+            MessageToSend[offset++] = MessageLengthBytes[1];
+            MessageToSend[offset++] = MessageLengthBytes[2];
+            MessageToSend[offset++] = MessageLengthBytes[3];
+
+            MessageToSend[offset] = 1;
+            offset += 4;
+
+            for (int i = 0; i < msgLen; i++) {
+                MessageToSend[offset++] = message[i];
+            }
+            var buffer = new ArraySegment<byte>(MessageToSend);
+
+            await mtSocket.SendAsync(buffer, WebSocketMessageType.Binary, true, CancellationToken.None);
         }
     }
 }
