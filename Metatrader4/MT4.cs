@@ -9,6 +9,7 @@ namespace Metatrader4 {
     class MT4 {
         static string pE = "13ef13b2b76dd8:5795gdcfb2fdc1ge85bf768f54773d22fff996e3ge75g5:75";
         private byte[] FirstEncryptionKey = NormaliseKey(CreateKey(MT4.pE));
+        private byte[] WindowsSpecification = NormaliseKey("67068786ddd67fb402e56d865f299372");
         private byte[] IV = new byte[16] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         static string CreateKey(string key) {
             var result = new List<char>();
@@ -38,11 +39,13 @@ namespace Metatrader4 {
 
         private byte[] key;
         private string token;
+        private string password;
 
         public MT4(AccountResponse account) {
             random = new Random();
             key = MT4.NormaliseKey(account.key);
             token = account.token;
+            password = account.password;
         }
 
         public byte[] Token() {
@@ -53,7 +56,16 @@ namespace Metatrader4 {
         }
 
         public byte[] Password() {
+            byte[] password = BinaryWriter.Write16(this.password, 64 + 16);
 
+            int offset = 64;
+            for (int i = 0; i < 16; i++, offset++) {
+                password[offset] = WindowsSpecification[i];
+            }
+
+            byte[] passwordBuffer = Init(1, password);
+
+            return Encrypt(passwordBuffer, key, IV);
         }
 
         public byte[] Init(int opcode) {
@@ -72,8 +84,8 @@ namespace Metatrader4 {
             byte[] buffer = new byte[4 + token.Length];
 
             int offset = 0;
-            buffer[offset++] = GetRandomByte();
-            buffer[offset++] = GetRandomByte();
+            buffer[offset++] = 5; // GetRandomByte();
+            buffer[offset++] = 10; // GetRandomByte();
             buffer[offset++] = (byte)opcode;
             buffer[offset++] = 0;
 
@@ -110,7 +122,7 @@ namespace Metatrader4 {
                 aes.BlockSize = 128;
                 aes.Padding = PaddingMode.Zeros;
 
-                aes.Key = key;
+                aes.Key = this.key;
                 aes.IV = IV;
 
                 using (var decryptor = aes.CreateDecryptor(aes.Key, aes.IV)) {
@@ -128,5 +140,7 @@ namespace Metatrader4 {
                 return ms.ToArray();
             }
         }
+
+
     }
 }

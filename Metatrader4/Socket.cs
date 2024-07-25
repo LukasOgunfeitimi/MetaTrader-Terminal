@@ -1,62 +1,63 @@
-﻿using Microsoft.VisualBasic;
-using Microsoft.VisualBasic.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Net.WebSockets;
-using System.Text;
+﻿using System.Net.WebSockets;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Metatrader4
 {
     class AccountResponse {
         public String key { get; set; }
         public String token { get; set; }
+        public String password;
     }
     class Socket
     {
         private MT4 MT;
         private Form1 _MainForm;
+        private UIInfo _info;
         private ClientWebSocket mtSocket;
-        public Socket(Form1 MainForm) {
+        private String _type;
+
+        public Socket(Form1 MainForm, UIInfo info, String type) {
             _MainForm = MainForm;
+            _info = info;
+            _type = type;
         }
         public async Task Connect() {
             AccountResponse account = await GetInfo();
             MT = new MT4(account);
 
-            _MainForm.StatusText = "Connecting";
+            _info.StatusText = "Connecting";
 
             try
             {
                 mtSocket = new ClientWebSocket();
                 await mtSocket.ConnectAsync(new Uri("wss://gwt6.mql5.com:443"), CancellationToken.None);
 
-                _MainForm.StatusText = "Connected";
+                _info.StatusText = "Connected";
 
                 byte[] token = MT.Token();
 
                 Send(token);
 
-                await ReceiveMessagesAsync();
+                while (mtSocket.State == WebSocketState.Open) 
+                     await ReceiveMessagesAsync();
             } catch (Exception ex)
             {
                 Console.WriteLine(ex);
-                _MainForm.StatusText = "Failed";
+                _info.StatusText = "Failed";
             }
 
 
         }
 
         public async Task<AccountResponse> GetInfo() {
-            String UserName = _MainForm.UsernameText.Text;
-            String Password = _MainForm.PasswordText.Text;
-            String Server = _MainForm.ServerText.Text;
+            String UserName = _info.usernameText.Text;
+            String Password = _info.passwordText.Text;
+            String Server = _info.serverText.Text;
 
             String Response = await SendRequest(UserName, Password, Server);
+
             AccountResponse res = JsonSerializer.Deserialize<AccountResponse>(Response);
+            res.password = Password;
             return res;
         }
 
@@ -82,7 +83,6 @@ namespace Metatrader4
             Array.Copy(buffer, 8, MessageBuffer, 0, messageLength);
 
             byte[] decryptedMessage = MT.Decrypt(MessageBuffer);
-
             HandleMessage(decryptedMessage);
         }
 
@@ -96,13 +96,16 @@ namespace Metatrader4
             ushort opcode = reader.ReadUInt16();
 
             reader.ReadByte();
-
-
             switch (opcode) {
                 case 0:
-                    Console.WriteLine("ID: " + reader.ReadUInt16());
+                    Console.WriteLine("ID: " + BitConverter.ToUInt16(message, 0));
 
                     byte[] Password = MT.Password();
+                    
+                    Send(Password);
+                    break;
+                case 15:
+                    Console.WriteLine("password");
                     break;
             }
         }

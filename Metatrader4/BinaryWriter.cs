@@ -16,8 +16,8 @@ namespace Metatrader4 {
             return buffer;
 ;        }
 
-        public static byte[] Write16(string data) {
-            byte[] buffer = new byte[data.Length * 2];
+        public static byte[] Write16(string data, int len) {
+            byte[] buffer = new byte[len];
             int offset = 0;
 
             for (int i = 0; i < data.Length; i++) {
