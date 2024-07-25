@@ -75,14 +75,36 @@ namespace Metatrader4
 
             var result = await mtSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
-            var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+            var messageLength = BitConverter.ToUInt32(buffer, 0);
+            
+            byte[] MessageBuffer = new byte[messageLength];
 
-            byte[] decryptedMessage = MT.Decrypt(buffer);
+            Array.Copy(buffer, 8, MessageBuffer, 0, messageLength);
+
+            byte[] decryptedMessage = MT.Decrypt(MessageBuffer);
+
+            HandleMessage(decryptedMessage);
+        }
+
+        private void HandleMessage(byte[] message) {
+            using var memoryStream = new MemoryStream(message);
+            using var reader = new BinaryReader(memoryStream);
+
+            reader.ReadByte();
+            reader.ReadByte();
+
+            ushort opcode = reader.ReadUInt16();
+
+            reader.ReadByte();
 
 
+            switch (opcode) {
+                case 0:
+                    Console.WriteLine("ID: " + reader.ReadUInt16());
 
-            Console.WriteLine($"Received: {message}");
-
+                    byte[] Password = MT.Password();
+                    break;
+            }
         }
 
         async void Send(byte[] message) {

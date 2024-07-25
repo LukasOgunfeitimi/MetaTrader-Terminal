@@ -52,6 +52,10 @@ namespace Metatrader4 {
             return encrypted_token;
         }
 
+        public byte[] Password() {
+
+        }
+
         public byte[] Init(int opcode) {
             byte[] buffer = new byte[4];
 
