@@ -1,9 +1,18 @@
-namespace Metatrader4 {
+using System.Net.WebSockets;
+using Metatrader4.Order;
+namespace Metatrader4
+{
     public partial class Form1 : Form
     {
-        public string TerminalText {
+        public string TerminalText
+        {
             get { return terminalText.Text; }
-            set { terminalText.Text = terminalText.Text + "\n" + value; }
+            set {
+                //DateTime now = DateTime.Now;
+                //terminalText.AppendText(now.ToString("HH:mm:ss.fff: "));
+                terminalText.AppendText(value);
+                terminalText.AppendText(Environment.NewLine);
+            }
 
         }
         private Socket socket1;
@@ -15,7 +24,8 @@ namespace Metatrader4 {
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            socket1 = new Socket(this, new UIInfo(statusText1, UsernameText1, PasswordText1, ServerText1),"parent");
+            socket1 = new Socket(this, new UIInfo(statusText1, UsernameText1, PasswordText1, ServerText1), "parent");
+            socket1.neworder += SendOrderToChild;
             try
             {
                 await socket1.Connect();
@@ -28,7 +38,7 @@ namespace Metatrader4 {
 
         private async void button2_Click(object sender, EventArgs e)
         {
-            socket2 = new Socket(this, new UIInfo(statusText2, UsernameText2, PasswordText2, ServerText2),"child");
+            socket2 = new Socket(this, new UIInfo(statusText2, UsernameText2, PasswordText2, ServerText2), "child");
             try
             {
                 await socket2.Connect();
@@ -37,6 +47,10 @@ namespace Metatrader4 {
             {
 
             }
+        }
+
+        private void SendOrderToChild(OrderResponse order) {
+            socket2.SendOrder(order);
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -75,6 +89,11 @@ namespace Metatrader4 {
         }
 
         private void UsernameText1_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void terminalText_TextChanged(object sender, EventArgs e)
         {
 
         }

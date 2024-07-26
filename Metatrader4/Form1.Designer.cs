@@ -73,7 +73,7 @@
             UsernameText1.Name = "UsernameText1";
             UsernameText1.Size = new Size(163, 34);
             UsernameText1.TabIndex = 2;
-            UsernameText1.Text = "89000015";
+            UsernameText1.Text = "12686389";
             UsernameText1.TextChanged += UsernameText1_TextChanged;
             // 
             // PasswordText1
@@ -82,7 +82,7 @@
             PasswordText1.Name = "PasswordText1";
             PasswordText1.Size = new Size(163, 34);
             PasswordText1.TabIndex = 3;
-            PasswordText1.Text = "TU6sIxL";
+            PasswordText1.Text = "jycf51";
             // 
             // ServerText1
             // 
@@ -90,7 +90,7 @@
             ServerText1.Name = "ServerText1";
             ServerText1.Size = new Size(163, 34);
             ServerText1.TabIndex = 4;
-            ServerText1.Text = "EightcapLtd-Real2";
+            ServerText1.Text = "ICMarketsSC-Demo01";
             // 
             // ServerText2
             // 
@@ -98,7 +98,7 @@
             ServerText2.Name = "ServerText2";
             ServerText2.Size = new Size(186, 34);
             ServerText2.TabIndex = 9;
-            ServerText2.Text = "EightcapLtd-Real2";
+            ServerText2.Text = "ICMarketsSC-Demo01";
             // 
             // PasswordText2
             // 
@@ -106,7 +106,7 @@
             PasswordText2.Name = "PasswordText2";
             PasswordText2.Size = new Size(186, 34);
             PasswordText2.TabIndex = 8;
-            PasswordText2.Text = "TU6sIxL";
+            PasswordText2.Text = "roos53";
             PasswordText2.TextChanged += PasswordText2_TextChanged;
             // 
             // UsernameText2
@@ -115,7 +115,7 @@
             UsernameText2.Name = "UsernameText2";
             UsernameText2.Size = new Size(186, 34);
             UsernameText2.TabIndex = 7;
-            UsernameText2.Text = "89000015";
+            UsernameText2.Text = "12686391";
             // 
             // statusText2
             // 
@@ -149,11 +149,13 @@
             // 
             // terminalText
             // 
+            terminalText.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
             terminalText.Location = new Point(39, 35);
             terminalText.Multiline = true;
             terminalText.Name = "terminalText";
             terminalText.Size = new Size(379, 268);
             terminalText.TabIndex = 0;
+            terminalText.TextChanged += terminalText_TextChanged;
             // 
             // groupBox2
             // 

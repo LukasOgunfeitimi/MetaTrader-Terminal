@@ -4,8 +4,11 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Metatrader4.Binary;
+using Metatrader4.Order;
 
-namespace Metatrader4 {
+namespace Metatrader4
+{
     class MT4 {
         static string pE = "13ef13b2b76dd8:5795gdcfb2fdc1ge85bf768f54773d22fff996e3ge75g5:75";
         private byte[] FirstEncryptionKey = NormaliseKey(CreateKey(MT4.pE));
@@ -49,14 +52,14 @@ namespace Metatrader4 {
         }
 
         public byte[] Token() {
-            byte[] token = BinaryWriter.Write8(this.token);
+            byte[] token = Writer.Write8(this.token);
             byte[] token_init = Init(0, token);
             byte[] encrypted_token = Encrypt(token_init, FirstEncryptionKey, IV);
             return encrypted_token;
         }
 
         public byte[] Password() {
-            byte[] password = BinaryWriter.Write16(this.password, 64 + 16);
+            byte[] password = Writer.Write16(this.password, 64 + 16);
 
             int offset = 64;
             for (int i = 0; i < 16; i++, offset++) {
@@ -66,6 +69,37 @@ namespace Metatrader4 {
             byte[] passwordBuffer = Init(1, password);
 
             return Encrypt(passwordBuffer, key, IV);
+        }
+
+        public byte[] InitOrder(OrderResponse order) {
+            byte[] OrderBuffer = new byte[95];
+            int offset = 0;
+            OrderBuffer[offset] = 66; // Market execution
+
+            byte[] asset = Writer.WriteString(order.asset);
+
+            offset += 11;
+
+            for (int i = 0; i < asset.Length; i++) {
+                OrderBuffer[offset++] = asset[i];
+            }
+
+            offset += 4;
+
+            OrderBuffer[offset++] = (byte)(order.volume & 0xFF);
+            OrderBuffer[offset++] = (byte)((order.volume >> 8) & 0xFF);
+            OrderBuffer[offset++] = (byte)((order.volume >> 16) & 0xFF);
+            OrderBuffer[offset++] = (byte)((order.volume >> 24) & 0xFF);
+
+            offset = 91;
+
+            OrderBuffer[offset++] = 233;
+            OrderBuffer[offset++] = 3;
+
+            OrderBuffer[23] = 1;
+          
+            byte[] InitOrderBuffer = Init(12, OrderBuffer);
+            return Encrypt(InitOrderBuffer, key, IV);
         }
 
         public byte[] Init(int opcode) {
@@ -84,8 +118,8 @@ namespace Metatrader4 {
             byte[] buffer = new byte[4 + token.Length];
 
             int offset = 0;
-            buffer[offset++] = 5; // GetRandomByte();
-            buffer[offset++] = 10; // GetRandomByte();
+            buffer[offset++] = GetRandomByte();
+            buffer[offset++] = GetRandomByte();
             buffer[offset++] = (byte)opcode;
             buffer[offset++] = 0;
 

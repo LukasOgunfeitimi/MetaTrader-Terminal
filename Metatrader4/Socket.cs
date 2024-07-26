@@ -1,5 +1,7 @@
 ﻿using System.Net.WebSockets;
 using System.Text.Json;
+using Metatrader4.Binary;
+using Metatrader4.Order;
 
 namespace Metatrader4
 {
@@ -13,8 +15,10 @@ namespace Metatrader4
         private MT4 MT;
         private Form1 _MainForm;
         private UIInfo _info;
-        private ClientWebSocket mtSocket;
+        public ClientWebSocket mtSocket;
         private String _type;
+
+        public event Action<OrderResponse> neworder;
 
         public Socket(Form1 MainForm, UIInfo info, String type) {
             _MainForm = MainForm;
@@ -40,6 +44,7 @@ namespace Metatrader4
 
                 while (mtSocket.State == WebSocketState.Open) 
                      await ReceiveMessagesAsync();
+
             } catch (Exception ex)
             {
                 Console.WriteLine(ex);
@@ -90,12 +95,15 @@ namespace Metatrader4
             using var memoryStream = new MemoryStream(message);
             using var reader = new BinaryReader(memoryStream);
 
+            int offset = 5; // For manual reading
+
             reader.ReadByte();
             reader.ReadByte();
 
             ushort opcode = reader.ReadUInt16();
 
             reader.ReadByte();
+
             switch (opcode) {
                 case 0:
                     Console.WriteLine("ID: " + BitConverter.ToUInt16(message, 0));
@@ -105,9 +113,39 @@ namespace Metatrader4
                     Send(Password);
                     break;
                 case 15:
-                    Console.WriteLine("password");
+                    uint successStatus = reader.ReadUInt32();
+
+                    if (successStatus == 0) {
+                        Console.WriteLine("Logged in");
+                        _MainForm.TerminalText = _type + " logged in sucessfully";
+                    } else Console.WriteLine("Failed");
                     break;
+                case 10: // Order Recieved
+                    OrderResponse order = new OrderResponse();
+                    offset += (16 + 8);
+
+                    uint ticket = Reader.ReadUInt32(message, offset);
+                    offset += 4;
+                    string asset = Reader.ReadString(message, offset, 12);
+
+                    _MainForm.TerminalText = _type + " recieved order number: " + ticket + " for " + asset;
+                    order.ticketNumber = ticket;
+                    order.asset = asset;
+
+                    if (_type == "parent")
+                        neworder(order);
+                    break;
+
             }
+        }
+
+        public void SendOrder(OrderResponse order) {
+            if (mtSocket.State != WebSocketState.Open) return;
+            if (_type != "child") return;
+
+            byte[] OrderToSend = MT.InitOrder(order);
+            _MainForm.TerminalText = _type + " sent " + order.ticketNumber + " to child";
+            Send(OrderToSend);
         }
 
         async void Send(byte[] message) {
