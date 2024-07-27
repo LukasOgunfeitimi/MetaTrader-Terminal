@@ -76,6 +76,8 @@ namespace Metatrader4
             int offset = 0;
             OrderBuffer[offset] = 66; // Market execution
 
+            OrderBuffer[1] = order.direction; 
+
             byte[] asset = Writer.WriteString(order.asset);
 
             offset += 11;

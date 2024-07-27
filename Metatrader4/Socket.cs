@@ -30,6 +30,7 @@ namespace Metatrader4
             MT = new MT4(account);
 
             _info.StatusText = "Connecting";
+            UpdateTerminal("attempting connection");
 
             try
             {
@@ -37,6 +38,7 @@ namespace Metatrader4
                 await mtSocket.ConnectAsync(new Uri("wss://gwt6.mql5.com:443"), CancellationToken.None);
 
                 _info.StatusText = "Connected";
+                UpdateTerminal("connected");
 
                 byte[] token = MT.Token();
 
@@ -49,6 +51,7 @@ namespace Metatrader4
             {
                 Console.WriteLine(ex);
                 _info.StatusText = "Failed";
+                UpdateTerminal("failed");
             }
 
 
@@ -106,10 +109,7 @@ namespace Metatrader4
 
             switch (opcode) {
                 case 0:
-                    Console.WriteLine("ID: " + BitConverter.ToUInt16(message, 0));
-
                     byte[] Password = MT.Password();
-                    
                     Send(Password);
                     break;
                 case 15:
@@ -117,7 +117,9 @@ namespace Metatrader4
 
                     if (successStatus == 0) {
                         Console.WriteLine("Logged in");
-                        _MainForm.TerminalText = _type + " logged in sucessfully";
+
+                        UpdateTerminal("logged in succesfully");
+
                     } else Console.WriteLine("Failed");
                     break;
                 case 10: // Order Recieved
@@ -127,11 +129,16 @@ namespace Metatrader4
                     uint ticket = Reader.ReadUInt32(message, offset);
                     offset += 4;
                     string asset = Reader.ReadString(message, offset, 12);
+                    offset += 4;
 
-                    _MainForm.TerminalText = _type + " recieved order number: " + ticket + " for " + asset;
+                    offset += 12;
+                    byte direction = message[offset];
+
                     order.ticketNumber = ticket;
                     order.asset = asset;
+                    order.direction = direction;
 
+                    UpdateOrder("recieved " + order.GetDirectionName() + " order number: " + ticket + " for " + asset);
                     if (_type == "parent")
                         neworder(order);
                     break;
@@ -144,7 +151,7 @@ namespace Metatrader4
             if (_type != "child") return;
 
             byte[] OrderToSend = MT.InitOrder(order);
-            _MainForm.TerminalText = _type + " sent " + order.ticketNumber + " to child";
+            UpdateOrder("sent " + order.ticketNumber);
             Send(OrderToSend);
         }
 
@@ -169,6 +176,13 @@ namespace Metatrader4
             var buffer = new ArraySegment<byte>(MessageToSend);
 
             await mtSocket.SendAsync(buffer, WebSocketMessageType.Binary, true, CancellationToken.None);
+        }
+
+        private void UpdateTerminal(string update) {
+            _MainForm.TerminalText = _type + " " + update;
+        }
+        private void UpdateOrder(string update) {
+            _MainForm.TerminalText = _type + " " + update;
         }
     }
 }
