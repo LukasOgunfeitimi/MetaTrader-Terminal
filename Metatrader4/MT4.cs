@@ -74,7 +74,7 @@ namespace Metatrader4
         public byte[] InitOrder(OrderResponse order) {
             byte[] OrderBuffer = new byte[95];
             int offset = 0;
-            OrderBuffer[offset] = 66; // Market execution
+            OrderBuffer[offset] = 66; // order
 
             OrderBuffer[1] = order.direction; 
 

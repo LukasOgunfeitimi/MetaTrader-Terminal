@@ -55,5 +55,13 @@ namespace Metatrader4
         private void groupBox1_Enter(object sender, EventArgs e) {
 
         }
+        private void Form1_Close(object sender, EventArgs e) {
+            if (socket1 != null) socket1.Close();
+            if (socket2 != null) socket2.Close();
+        }
+
+        private void Form1_Load(object sender, EventArgs e) {
+
+        }
     }
 }

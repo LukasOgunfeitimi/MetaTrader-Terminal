@@ -182,7 +182,11 @@ namespace Metatrader4
             _MainForm.TerminalText = _type + " " + update;
         }
         private void UpdateOrder(string update) {
-            _MainForm.TerminalText = _type + " " + update;
+            _MainForm.OrderText = _type + " " + update;
+        }
+        public void Close() {
+            if (mtSocket.State == WebSocketState.Open) 
+                mtSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "client req", CancellationToken.None);
         }
     }
 }

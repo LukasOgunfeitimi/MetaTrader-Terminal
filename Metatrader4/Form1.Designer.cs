@@ -215,6 +215,8 @@
             Controls.Add(groupBox1);
             Name = "Form1";
             Text = "Trade Copier";
+            FormClosing += Form1_Close;
+            Load += Form1_Load;
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();
             groupBox2.ResumeLayout(false);
