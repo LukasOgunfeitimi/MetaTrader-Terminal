@@ -13,7 +13,7 @@ This terminal will be able to copy trades from multiple accounts.
 
 ## Demo
 
-https://github.com/user-attachments/assets/c122d558-2dab-4adc-a35c-7b38f9e382af
+https://streamable.com/u3qsi6
 
 ## Installation
 -  1. Clone repo
